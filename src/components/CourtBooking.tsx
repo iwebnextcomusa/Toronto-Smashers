@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, CheckCircle2, AlertCircle, Sparkles, User, Mail, Phone, RefreshCw, Ticket, Zap } from 'lucide-react';
+import { Calendar, Clock, CheckCircle2, AlertCircle, Sparkles, User, Mail, Phone, RefreshCw, Ticket, Zap, Copy, Check, Printer, X, ExternalLink } from 'lucide-react';
 import { CourtSlot, Booking } from '../types';
 
 export const CourtBooking: React.FC = () => {
@@ -14,6 +14,11 @@ export const CourtBooking: React.FC = () => {
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [bookingSuccess, setBookingSuccess] = useState<Booking | null>(null);
   const [errorMsg, setErrorMsg] = useState<string>('');
+
+  // Toast Feedback State
+  const [showToast, setShowToast] = useState<boolean>(false);
+  const [toastData, setToastData] = useState<Booking | null>(null);
+  const [copiedId, setCopiedId] = useState<boolean>(false);
 
   // Form states
   const [userName, setUserName] = useState<string>('');
@@ -54,6 +59,28 @@ export const CourtBooking: React.FC = () => {
   useEffect(() => {
     fetchBookings();
   }, [selectedDate]);
+
+  // Auto-dismiss toast after 8 seconds
+  useEffect(() => {
+    if (showToast) {
+      const timer = setTimeout(() => {
+        setShowToast(false);
+      }, 8000);
+      return () => clearTimeout(timer);
+    }
+  }, [showToast]);
+
+  const handleCopyId = (id: string) => {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(id);
+      setCopiedId(true);
+      setTimeout(() => setCopiedId(false), 2500);
+    }
+  };
+
+  const handlePrintReceipt = () => {
+    window.print();
+  };
 
   // Calculate pricing
   const isPeakHour = (slot: string) => {
@@ -107,6 +134,8 @@ export const CourtBooking: React.FC = () => {
 
       if (res.ok && data.booking) {
         setBookingSuccess(data.booking);
+        setToastData(data.booking);
+        setShowToast(true);
         fetchBookings();
       } else {
         setErrorMsg(data.error || 'Failed to complete court booking.');
@@ -400,26 +429,95 @@ export const CourtBooking: React.FC = () => {
 
       </div>
 
+      {/* Floating Toast Notification */}
+      {showToast && toastData && (
+        <div className="fixed bottom-6 right-6 z-50 max-w-sm w-full bg-slate-900/95 border border-green-500/50 shadow-2xl rounded-2xl p-4 backdrop-blur-lg text-left space-y-3 transition-all animate-slideUp">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <div className="w-9 h-9 rounded-full bg-green-500/20 text-green-400 flex items-center justify-center shrink-0 border border-green-500/40 mt-0.5">
+                <CheckCircle2 className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-white flex items-center gap-1.5">
+                  <span>Court Booking Success!</span>
+                </h4>
+                <p className="text-xs text-slate-300 mt-0.5">
+                  {toastData.courtName} • {toastData.date} ({toastData.timeSlot})
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowToast(false)}
+              className="text-slate-400 hover:text-white p-1 rounded-lg transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="flex items-center justify-between pt-2 border-t border-slate-800 text-xs">
+            <button
+              onClick={() => {
+                setBookingSuccess(toastData);
+                setShowToast(false);
+              }}
+              className="font-bold text-blue-400 hover:text-blue-300 underline underline-offset-2 flex items-center gap-1"
+            >
+              <Ticket className="w-3.5 h-3.5" />
+              <span>View Full Ticket</span>
+            </button>
+            <button
+              onClick={() => handleCopyId(toastData.id)}
+              className="text-slate-400 hover:text-slate-200 flex items-center gap-1"
+            >
+              {copiedId ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
+              <span>{copiedId ? 'Copied' : `ID: ${toastData.id.slice(0, 8)}...`}</span>
+            </button>
+          </div>
+
+          {/* Auto-dismiss progress bar animation */}
+          <div className="w-full bg-slate-800 h-1 rounded-full overflow-hidden">
+            <div className="bg-gradient-to-r from-green-500 to-blue-500 h-full w-full animate-pulse"></div>
+          </div>
+        </div>
+      )}
+
       {/* Confirmation Modal Ticket */}
       {bookingSuccess && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4 animate-fadeIn">
           <div className="bg-slate-900 border border-slate-700 text-white rounded-3xl max-w-md w-full p-6 sm:p-8 space-y-6 shadow-2xl relative text-left">
             
-            <div className="text-center space-y-2">
-              <div className="w-12 h-12 rounded-full bg-green-500/20 text-green-400 flex items-center justify-center mx-auto border border-green-500/40">
-                <CheckCircle2 className="w-7 h-7" />
+            <button
+              onClick={() => setBookingSuccess(null)}
+              className="absolute top-5 right-5 p-2 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
+              title="Close modal"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="text-center space-y-2 pt-1">
+              <div className="w-14 h-14 rounded-full bg-green-500/20 text-green-400 flex items-center justify-center mx-auto border border-green-500/40 shadow-lg shadow-green-500/10">
+                <CheckCircle2 className="w-8 h-8" />
               </div>
               <h3 className="text-2xl font-bold font-display text-white">Court Reservation Confirmed!</h3>
               <p className="text-xs text-slate-300">
-                Thank you, {bookingSuccess.userName}! Your court is locked in at Pickering.
+                Thank you, <span className="font-semibold text-white">{bookingSuccess.userName}</span>! Confirmation sent to <span className="text-blue-300">{bookingSuccess.userEmail}</span>.
               </p>
             </div>
 
             {/* Ticket Details */}
             <div className="p-5 rounded-2xl bg-slate-800/90 border border-slate-700/80 space-y-3 text-xs">
-              <div className="flex justify-between border-b border-slate-700 pb-2">
+              <div className="flex justify-between items-center border-b border-slate-700 pb-2.5">
                 <span className="text-slate-400">Booking Ticket ID:</span>
-                <span className="font-mono font-bold text-blue-400">{bookingSuccess.id}</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="font-mono font-bold text-blue-400">{bookingSuccess.id}</span>
+                  <button
+                    onClick={() => handleCopyId(bookingSuccess.id)}
+                    className="p-1 rounded bg-slate-700 hover:bg-slate-600 text-slate-300 transition-colors"
+                    title="Copy Ticket ID"
+                  >
+                    {copiedId ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">Court Assigned:</span>
@@ -430,18 +528,24 @@ export const CourtBooking: React.FC = () => {
                 <span className="font-bold text-white">{bookingSuccess.date} ({bookingSuccess.timeSlot})</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">Location:</span>
+                <span className="text-slate-400">Facility Location:</span>
                 <span className="font-bold text-white">Toronto Smashers, Pickering ON</span>
               </div>
-              <div className="flex justify-between border-t border-slate-700 pt-2">
+              {bookingSuccess.racketRental && (
+                <div className="flex justify-between text-amber-300">
+                  <span>Add-on:</span>
+                  <span className="font-semibold">Yonex Racket Rental Included</span>
+                </div>
+              )}
+              <div className="flex justify-between items-center border-t border-slate-700 pt-2.5">
                 <span className="text-slate-400">Total Paid/Due:</span>
-                <span className="font-bold text-green-400 text-sm">${bookingSuccess.totalPrice} CAD</span>
+                <span className="font-bold text-green-400 text-base">${bookingSuccess.totalPrice} CAD</span>
               </div>
             </div>
 
-            {/* QR Code Placeholder */}
-            <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 text-center space-y-1">
-              <div className="w-24 h-24 bg-white p-2 rounded-lg mx-auto flex items-center justify-center">
+            {/* QR Code Check-in Box */}
+            <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 text-center space-y-2">
+              <div className="w-24 h-24 bg-white p-2 rounded-lg mx-auto flex items-center justify-center shadow-md">
                 <div className="w-full h-full bg-slate-900 rounded grid grid-cols-4 gap-1 p-1">
                   <div className="bg-white"></div><div className="bg-transparent"></div><div className="bg-white"></div><div className="bg-white"></div>
                   <div className="bg-transparent"></div><div className="bg-white"></div><div className="bg-transparent"></div><div className="bg-white"></div>
@@ -449,14 +553,35 @@ export const CourtBooking: React.FC = () => {
                   <div className="bg-white"></div><div className="bg-transparent"></div><div className="bg-white"></div><div className="bg-white"></div>
                 </div>
               </div>
-              <p className="text-[10px] text-slate-400">Show QR Code or ID at Pickering court check-in counter</p>
+              <p className="text-[11px] text-slate-400">Show QR Code or ID at Pickering court check-in desk</p>
+            </div>
+
+            {/* Actions: Print Receipt / Add to Calendar / Close */}
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <button
+                onClick={handlePrintReceipt}
+                className="py-2.5 px-3 bg-slate-800 hover:bg-slate-700 font-semibold text-slate-200 rounded-xl transition-colors flex items-center justify-center gap-1.5"
+              >
+                <Printer className="w-3.5 h-3.5" />
+                <span>Print Receipt</span>
+              </button>
+
+              <a
+                href={`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent('Badminton Court Booking at Toronto Smashers')}&details=${encodeURIComponent(`Court: ${bookingSuccess.courtName}\nTicket ID: ${bookingSuccess.id}`)}&location=${encodeURIComponent('Toronto Smashers, Pickering ON')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="py-2.5 px-3 bg-slate-800 hover:bg-slate-700 font-semibold text-blue-300 rounded-xl transition-colors flex items-center justify-center gap-1.5 text-center"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                <span>Add to Calendar</span>
+              </a>
             </div>
 
             <button
               onClick={() => setBookingSuccess(null)}
-              className="w-full py-3 bg-blue-600 hover:bg-blue-500 font-bold text-sm text-white rounded-xl shadow-md transition-colors"
+              className="w-full py-3 bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-500 hover:to-green-500 font-bold text-sm text-white rounded-xl shadow-lg transition-all"
             >
-              Done / Close
+              Done / Reserve Another Slot
             </button>
           </div>
         </div>
