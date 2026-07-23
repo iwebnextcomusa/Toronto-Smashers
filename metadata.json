@@ -1,0 +1,6 @@
+{
+  "name": "Toronto Smashers Badminton Club",
+  "description": "Toronto Smashers Badminton Club in Pickering, Ontario. Modern interactive website featuring 3D shuttlecock experience, program registration, real-time court booking, and AI assistant.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
